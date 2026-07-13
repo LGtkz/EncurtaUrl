@@ -94,10 +94,12 @@ function render(){
   const results=document.getElementById('results');
   results.style.display = links.length ? 'block' : 'none';
   
-  list.innerHTML = links.map(l=>`
+list.innerHTML = links.map(l => `
     <li class="link-item" data-code="${l.code}">
       <div class="link-info">
-       <a class="short" href="https://${l.short}" target="_blank" rel="noopener">https://${l.short}</a>
+        <a class="short" href="${BASE_URL}/${l.code}" target="_blank" rel="noopener">
+          ${l.short}
+        </a>
         <span class="original" title="${l.original}">${l.original}</span>
       </div>
       <div class="link-actions">

@@ -33,7 +33,7 @@ app.get('/api/links', async (req: Request, res: Response) => {
       id: l.id,
       original: l.originalUrl,
       code: l.shortCode,
-      short: `localhost:${PORT}/${l.shortCode}`
+      short: `Aesthetic/${l.shortCode}`
     }));
     
     return res.json(formatted);
@@ -94,23 +94,35 @@ app.delete('/api/shorten/:code', async (req: Request, res: Response) => {
   }
 });
 
-// ROTA: Redirecionamento (GET /:code)
 app.get('/:code', async (req: Request, res: Response) => {
   try {
-    const code = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
-    const link = await prisma.link.findUnique({ where: { shortCode: code.toLowerCase() } });
-    
-    if (!link) return res.status(404).send('<h1>Link não encontrado</h1>');
+    const { code } = req.params;
 
-    // Incrementa cliques em background
-    prisma.link.update({
-      where: { id: link.id },
-      data: { clicks: { increment: 1 } }
-    }).catch(err => console.error(err));
+    // Busca no banco pelo shortCode (garantindo o mesmo padrão de caixa)
+    const linkObj = await prisma.link.findUnique({
+      where: { shortCode: code.toLowerCase() }
+    });
 
-    return res.redirect(301, link.originalUrl);
+    // Se o código não existir no banco de dados SQLite
+    if (!linkObj) {
+      return res.status(404).send(`
+        <div style="font-family:sans-serif; text-align:center; padding-top:100px;">
+          <h1>Link não encontrado 💔</h1>
+          <p>O código <strong>${code}</strong> não existe ou foi apagado.</p>
+        </div>
+      `);
+    }
+
+    // REDIRECIONA PARA O SITE ORIGINAL
+    // Importante: garante que a URL tenha http/https para o Express não achar que é uma rota interna
+    const urlDestino = linkObj.originalUrl.startsWith('http') 
+      ? linkObj.originalUrl 
+      : `https://${linkObj.originalUrl}`;
+
+    return res.redirect(urlDestino);
   } catch (error) {
-    return res.status(500).send('Erro interno.');
+    console.error('Erro no redirecionamento:', error);
+    return res.status(500).send('Erro interno ao redirecionar.');
   }
 });
 
