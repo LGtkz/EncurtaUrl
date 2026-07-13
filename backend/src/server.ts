@@ -6,7 +6,6 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
 const app = express();
 
-
 // Prisma 7 exige um "driver adapter" para se conectar ao banco.
 const adapter = new PrismaBetterSqlite3({
   url: process.env.DATABASE_URL || 'file:./prisma/dev.db'
@@ -34,7 +33,7 @@ app.get('/api/links', async (req: Request, res: Response) => {
       id: l.id,
       original: l.originalUrl,
       code: l.shortCode,
-      short: `Aesthetic:/${l.shortCode}`
+      short: `localhost:${PORT}/${l.shortCode}`
     }));
     
     return res.json(formatted);
@@ -77,7 +76,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     return res.status(201).json({
       original: newLink.originalUrl,
       code: newLink.shortCode,
-      short: `Aesthetic:/${newLink.shortCode}`
+      short: `localhost:${PORT}/${newLink.shortCode}`
     });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
@@ -112,27 +111,6 @@ app.get('/:code', async (req: Request, res: Response) => {
     return res.redirect(301, link.originalUrl);
   } catch (error) {
     return res.status(500).send('Erro interno.');
-  }
-});
-
-
-app.get('/api/limpar-banco', async (req: Request, res: Response) => {
-  try {
-    console.log('🧼 Iniciando limpeza forçada via código...');
-    
-    // O deleteMany sem nenhum argumento limpa TODOS os dados da tabela
-    const resultado = await prisma.link.deleteMany({});
-    
-    console.log(`✅ Sucesso! Foram apagados ${resultado.count} registros.`);
-    
-    return res.status(200).send(`
-      <h1>Banco de dados limpo com sucesso!</h1>
-      <p>Foram deletados <strong>${resultado.count}</strong> registros antigos.</p>
-      <p>A estrutura das tabelas foi mantida intacta e pronta para uso.</p>
-    `);
-  } catch (error) {
-    console.error('❌ Erro ao limpar o banco por rota:', error);
-    return res.status(500).json({ error: 'Erro interno ao limpar o banco.', detalhes: error });
   }
 });
 
