@@ -108,15 +108,16 @@ list.innerHTML = links.map(l => `
       </div>
     </li>`).join('');
 
-  // Ação do Botão Copiar
-  list.querySelectorAll('.copy-btn').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
+list.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
       const li = e.target.closest('.link-item');
       const code = li.dataset.code;
-      const link = links.find(l=>l.code===code);
-      navigator.clipboard.writeText('http://'+link.short).then(()=>{
-        btn.textContent='Copiado!'; btn.classList.add('copied');
-        setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1500);
+      
+      const linkRealFuncional = `${BASE_URL}/${code}`;
+      
+      navigator.clipboard.writeText(linkRealFuncional).then(() => {
+        btn.textContent = 'Copiado!'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1500);
       });
     });
   });
