@@ -33,7 +33,7 @@ app.get('/api/links', async (req: Request, res: Response) => {
       id: l.id,
       original: l.originalUrl,
       code: l.shortCode,
-      short: `EncurtaLove:${PORT}/${l.shortCode}`
+      short: `Aesthetic:/${l.shortCode}`
     }));
     
     return res.json(formatted);
@@ -76,7 +76,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     return res.status(201).json({
       original: newLink.originalUrl,
       code: newLink.shortCode,
-      short: `EncurtaLove:/${newLink.shortCode}`
+      short: `Aesthetic:/${newLink.shortCode}`
     });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
