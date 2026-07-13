@@ -1,10 +1,75 @@
-<div class="alias-input">
-  <span class="alias-prefix">Aesthetic/</span>
-  <input id="alias" type="text" placeholder="meu-link">
-</div>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Link Curto - Prévia</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#fafafa;color:#18181b;min-height:100vh;display:flex;justify-content:center;padding:80px 24px}
+.container{width:100%;max-width:560px}
+.header{text-align:center;margin-bottom:40px}
+.header h1{font-size:32px;font-weight:700;letter-spacing:-0.02em;margin-bottom:8px}
+.header p{color:#71717a;font-size:15px}
+.card{background:#fff;border:1px solid #e4e4e7;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:20px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field label{font-size:13px;font-weight:600;color:#3f3f46}
+.optional{font-weight:400;color:#a1a1aa}
+.field input{width:100%;padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;font-size:14px;font-family:inherit;color:#18181b;outline:none;transition:border-color .15s}
+.field input:focus{border-color:#18181b}
+.alias-input{display:flex;align-items:center;border:1px solid #e4e4e7;border-radius:10px;overflow:hidden}
+.alias-input:focus-within{border-color:#18181b}
+.alias-prefix{padding:12px 0 12px 14px;font-size:14px;color:#a1a1aa;white-space:nowrap}
+.alias-input input{border:none;padding-left:2px}
+.error{font-size:13px;color:#dc2626;background:#fef2f2;padding:10px 14px;border-radius:8px;display:none}
+.btn-primary{background:#18181b;color:#fff;border:none;border-radius:10px;padding:13px 20px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:#27272a}
+.results{margin-top:32px;display:none}
+.results h2{font-size:14px;font-weight:600;color:#71717a;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}
+.link-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.link-item{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.link-info{display:flex;flex-direction:column;gap:4px;min-width:0}
+.short{font-size:14px;font-weight:600;color:#18181b;text-decoration:none}
+.short:hover{text-decoration:underline}
+.original{font-size:12px;color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+.link-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-icon{background:#f4f4f5;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;font-family:inherit;color:#3f3f46;cursor:pointer;transition:background .15s}
+.btn-icon:hover{background:#e4e4e7}
+.btn-icon.copied{background:#dcfce7;color:#16a34a}
+.btn-icon.danger:hover{background:#fef2f2;color:#dc2626}
+</style>
+</head>
+<body>
+<main class="container">
+  <div class="header">
+    <h1>Encurtador de Links</h1>
+    <p>Cole seu link, personalize se quiser, e pronto.</p>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="url">Link original</label>
+      <input id="url" type="text" placeholder="https://exemplo.com/pagina-com-um-link-bem-grande">
+    </div>
+    <div class="field">
+      <label for="alias">Apelido personalizado <span class="optional">(opcional)</span></label>
+      <div class="alias-input">
+        <span class="alias-prefix">link.to/</span>
+        <input id="alias" type="text" placeholder="meu-link">
+      </div>
+    </div>
+    <p class="error" id="error"></p>
+    <button class="btn-primary" id="btn">Encurtar link</button>
+  </div>
+
+  <div class="results" id="results">
+    <h2>Seus links</h2>
+    <ul class="link-list" id="list"></ul>
+  </div>
+</main>
 
 <script>
-const API_URL = 'https://9e32-2804-14d-a484-4e33-708a-8f47-411b-afdf.ngrok-free.app';
+const API_URL = 'http://localhost:3000/api';
 let links = [];
 
 function isValidUrl(v){
@@ -25,19 +90,14 @@ async function carregarLinks() {
 }
 
 function render(){
-  const list = document.getElementById('list');
-  const results = document.getElementById('results');
+  const list=document.getElementById('list');
+  const results=document.getElementById('results');
   results.style.display = links.length ? 'block' : 'none';
   
-  // Pega a URL base do Ngrok (remove o '/api' do final)
-  const BASE_URL = API_URL.replace('/api', '');
-
-  list.innerHTML = links.map(l => `
+  list.innerHTML = links.map(l=>`
     <li class="link-item" data-code="${l.code}">
       <div class="link-info">
-        <a class="short" href="${BASE_URL}/${l.code}" target="_blank" rel="noopener">
-          ${l.short.startsWith('http') ? l.short : 'https://' + l.short}
-        </a>
+       <a class="short" href="http://${l.short}" target="_blank" rel="noopener">http://${l.short}</a>
         <span class="original" title="${l.original}">${l.original}</span>
       </div>
       <div class="link-actions">
@@ -46,24 +106,22 @@ function render(){
       </div>
     </li>`).join('');
 
-  // Ação do Botão Copiar (Copia o link REAL de internet que as pessoas podem acessar)
-  list.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Ação do Botão Copiar
+  list.querySelectorAll('.copy-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
       const li = e.target.closest('.link-item');
       const code = li.dataset.code;
-      
-      const linkPublicoReal = `${BASE_URL}/${code}`;
-      
-      navigator.clipboard.writeText(linkPublicoReal).then(() => {
-        btn.textContent = 'Copiado!'; btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1500);
+      const link = links.find(l=>l.code===code);
+      navigator.clipboard.writeText('http://'+link.short).then(()=>{
+        btn.textContent='Copiado!'; btn.classList.add('copied');
+        setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1500);
       });
     });
   });
 
   // Ação do Botão Remover (Dispara chamada DELETE no banco)
-  list.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+  list.querySelectorAll('.remove-btn').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
       const li = e.target.closest('.link-item');
       const code = li.dataset.code;
       
@@ -73,8 +131,8 @@ function render(){
         });
 
         if (response.ok) {
-          const idx = links.findIndex(l => l.code === code);
-          links.splice(idx, 1);
+          const idx = links.findIndex(l=>l.code===code);
+          links.splice(idx,1);
           render();
         } else {
           alert('Erro ao deletar o link no servidor.');
@@ -89,14 +147,14 @@ function render(){
 // Envia os dados por POST para salvar na API
 async function encurtar(){
   const errorEl = document.getElementById('error');
-  errorEl.style.display = 'none';
+  errorEl.style.display='none';
   const urlInput = document.getElementById('url');
   const aliasInput = document.getElementById('alias');
   const url = urlInput.value.trim();
   const custom_code = aliasInput.value.trim();
 
-  if(!url){ errorEl.textContent = 'Cole um link para continuar.'; errorEl.style.display = 'block'; return; }
-  if(!isValidUrl(url)){ errorEl.textContent = 'Digite uma URL válida (ex: https://exemplo.com).'; errorEl.style.display = 'block'; return; }
+  if(!url){ errorEl.textContent='Cole um link para continuar.'; errorEl.style.display='block'; return; }
+  if(!isValidUrl(url)){ errorEl.textContent='Digite uma URL válida (ex: https://exemplo.com).'; errorEl.style.display='block'; return; }
 
   try {
     const response = await fetch(`${API_URL}/shorten`, {
@@ -115,7 +173,7 @@ async function encurtar(){
 
     // Adiciona o link retornado pela API na lista
     links.unshift({ original: data.original, code: data.code, short: data.short });
-    urlInput.value = ''; aliasInput.value = '';
+    urlInput.value=''; aliasInput.value='';
     render();
 
   } catch (err) {
@@ -125,9 +183,11 @@ async function encurtar(){
 }
 
 document.getElementById('btn').addEventListener('click', encurtar);
-document.getElementById('url').addEventListener('keyup', e => { if(e.key === 'Enter') encurtar(); });
-document.getElementById('alias').addEventListener('keyup', e => { if(e.key === 'Enter') encurtar(); });
+document.getElementById('url').addEventListener('keyup', e=>{ if(e.key==='Enter') encurtar(); });
+document.getElementById('alias').addEventListener('keyup', e=>{ if(e.key==='Enter') encurtar(); });
 
 // Inicializa a listagem trazendo os dados persistidos no banco
 carregarLinks();
 </script>
+</body>
+</html>
