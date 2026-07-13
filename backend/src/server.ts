@@ -48,7 +48,11 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     const { original_url, custom_code } = req.body;
     if (!original_url) return res.status(400).json({ error: 'Cole um link para continuar.' });
 
-    let code = custom_code?.trim();
+    const trimmedCode = typeof custom_code === 'string'
+      ? custom_code.trim()
+      : undefined;
+
+    let code: string | undefined = trimmedCode;
 
     if (code) {
       if (!/^[a-zA-Z0-9-_]{3,20}$/.test(code)) {
@@ -65,7 +69,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
       }
     }
 
-    const savedCode = code.toLowerCase();
+    const savedCode = code!.toLowerCase();
     let targetUrl = original_url.trim();
     if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
 
@@ -86,8 +90,11 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
 // ROTA: Deletar Link (DELETE /api/shorten/:code)
 app.delete('/api/shorten/:code', async (req: Request, res: Response) => {
   try {
-    const code = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
-    await prisma.link.delete({ where: { shortCode: code.toLowerCase() } });
+    const rawCode = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+    const code = typeof rawCode === 'string' ? rawCode.trim().toLowerCase() : undefined;
+    if (!code) return res.status(400).json({ error: 'Código inválido.' });
+
+    await prisma.link.delete({ where: { shortCode: code } });
     return res.sendStatus(200);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao deletar link.' });
@@ -96,11 +103,20 @@ app.delete('/api/shorten/:code', async (req: Request, res: Response) => {
 
 app.get('/:code', async (req: Request, res: Response) => {
   try {
-    const { code } = req.params;
+    const rawCode = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+    const code = typeof rawCode === 'string' ? rawCode.trim().toLowerCase() : undefined;
+    if (!code) {
+      return res.status(404).send(`
+        <div style="font-family:sans-serif; text-align:center; padding-top:100px;">
+          <h1>Link não encontrado 💔</h1>
+          <p>O código <strong>${rawCode ?? ''}</strong> não existe ou foi apagado.</p>
+        </div>
+      `);
+    }
 
     // Busca no banco pelo shortCode (garantindo o mesmo padrão de caixa)
     const linkObj = await prisma.link.findUnique({
-      where: { shortCode: code.toLowerCase() }
+      where: { shortCode: code }
     });
 
     // Se o código não existir no banco de dados SQLite
