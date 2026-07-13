@@ -33,7 +33,7 @@ app.get('/api/links', async (req: Request, res: Response) => {
       id: l.id,
       original: l.originalUrl,
       code: l.shortCode,
-      short: `localhost:${PORT}/${l.shortCode}`
+      short: `Aesthetic/${l.shortCode}`
     }));
     
     return res.json(formatted);
@@ -76,7 +76,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     return res.status(201).json({
       original: newLink.originalUrl,
       code: newLink.shortCode,
-      short: `localhost:${PORT}/${newLink.shortCode}`
+      short: `Aesthetic/${newLink.shortCode}`
     });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
@@ -113,5 +113,6 @@ app.get('/:code', async (req: Request, res: Response) => {
     return res.status(500).send('Erro interno.');
   }
 });
+
 
 app.listen(PORT, () => console.log(`🚀 Servidor rodando em http://localhost:${PORT}`));

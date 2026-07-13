@@ -70,6 +70,9 @@ body{font-family:'Inter',sans-serif;background:#fafafa;color:#18181b;min-height:
 
 <script>
 const API_URL = 'https://0e13-2804-14d-a484-4e33-708a-8f47-411b-afdf.ngrok-free.app/api';
+
+const BASE_URL = API_URL.replace('/api', '');
+
 let links = [];
 
 function isValidUrl(v){
@@ -97,7 +100,9 @@ function render(){
   list.innerHTML = links.map(l=>`
     <li class="link-item" data-code="${l.code}">
       <div class="link-info">
-       <a class="short" href="https://${l.short}" target="_blank" rel="noopener">https://${l.short}</a>
+       <a class="short" href="${BASE_URL}/${l.code}" target="_blank" rel="noopener">
+  ${l.short}
+</a>
         <span class="original" title="${l.original}">${l.original}</span>
       </div>
       <div class="link-actions">
