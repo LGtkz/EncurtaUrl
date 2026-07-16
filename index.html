@@ -28,6 +28,7 @@ body{font-family:'Inter',sans-serif;background:#fafafa;color:#18181b;min-height:
 .results h2{font-size:14px;font-weight:600;color:#71717a;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em}
 .link-list{list-style:none;display:flex;flex-direction:column;gap:10px}
 .link-item{background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.empty-state{justify-content:center;color:#71717a;font-size:14px;text-align:center}
 .link-info{display:flex;flex-direction:column;gap:4px;min-width:0}
 .short{font-size:14px;font-weight:600;color:#18181b;text-decoration:none}
 .short:hover{text-decoration:underline}
@@ -72,6 +73,7 @@ body{font-family:'Inter',sans-serif;background:#fafafa;color:#18181b;min-height:
 const API_URL = 'https://6e97-2804-14d-a484-4e33-c814-c2ed-e6db-5073.ngrok-free.app/api';
 const BASE_URL = API_URL.replace(/\/api\/?$/, '');
 let links = [];
+let isLoadingLinks = true;
 
 function isValidUrl(v){
   try{ new URL(v.match(/^https?:\/\//) ? v : 'https://'+v); return true; }catch{ return false; }
@@ -79,41 +81,52 @@ function isValidUrl(v){
 
 // Carrega os links do banco assim que abrir a aplicação
 async function carregarLinks() {
+  isLoadingLinks = true;
+  render();
+
   try {
     const response = await fetch(`${API_URL}/links`);
     if (response.ok) {
-      links = await response.json();
-      render();
+      const data = await response.json();
+      links = Array.isArray(data) ? data : [];
     }
   } catch (err) {
     console.error('Erro ao conectar com o banco de dados:', err);
+  } finally {
+    isLoadingLinks = false;
+    render();
   }
 }
 
 function render(){
   const list=document.getElementById('list');
   const results=document.getElementById('results');
-  results.style.display = links.length ? 'block' : 'none';
-  
+  const hasLinks = Array.isArray(links) && links.length > 0;
 
-list.innerHTML = links.map(l => {
+  results.style.display = hasLinks || isLoadingLinks ? 'block' : 'none';
+
+  if (!hasLinks) {
+    list.innerHTML = isLoadingLinks
+      ? '<li class="link-item empty-state">Carregando seus links...</li>'
+      : '<li class="link-item empty-state">Nenhum link salvo ainda.</li>';
+    return;
+  }
+  
+  list.innerHTML = links.map(l => {
     const shortUrl = `${BASE_URL}/${encodeURIComponent(l.code)}`;
-    const safeShortUrl = escapeHtml(shortUrl);
-    const safeOriginal = escapeHtml(l.original);
-    const safeCode = escapeHtml(l.code);
     return `
-    <li class="link-item" data-code="${safeCode}">
+    <li class="link-item" data-code="${l.code}">
       <div class="link-info">
-        <a class="short" href="${safeShortUrl}" target="_blank" rel="noopener">
-          ${safeShortUrl}
+        <a class="short" href="${shortUrl}" target="_blank" rel="noopener">
+          ${shortUrl}
         </a>
-        <span class="original" title="${safeOriginal}">${safeOriginal}</span>
+        <span class="original" title="${l.original}">${l.original}</span>
       </div>
       <div class="link-actions">
         <button class="btn-icon copy-btn">Copiar</button>
         <button class="btn-icon danger remove-btn">Remover</button>
       </div>
-    </li>`;
+    </li>`
   }).join('');
 
 list.querySelectorAll('.copy-btn').forEach(btn => {
