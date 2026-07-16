@@ -21,21 +21,32 @@ function generateRandomCode(length = 6): string {
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
+// Escapa valores antes de inserir em HTML gerado no servidor,
+// evitando XSS refletido (ex: código da URL indo pra página de erro).
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ROTA: Listar todos os links (GET /api/links)
 app.get('/api/links', async (req: Request, res: Response) => {
   try {
     const records = await prisma.link.findMany({
       orderBy: { createdAt: 'desc' }
     });
-    
+
     // Formata o retorno para bater com o formato esperado pelo seu script HTML
     const formatted = records.map(l => ({
       id: l.id,
       original: l.originalUrl,
       code: l.shortCode,
-      short: `Aesthetic/${l.shortCode}`
+      short: `http://localhost:${PORT}/${l.shortCode}`
     }));
-    
+
     return res.json(formatted);
   } catch (error) {
     return res.status(500).json({ error: 'Erro ao buscar links.' });
@@ -80,7 +91,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     return res.status(201).json({
       original: newLink.originalUrl,
       code: newLink.shortCode,
-      short: `localhost:${PORT}/${newLink.shortCode}`
+      short: `http://localhost:${PORT}/${newLink.shortCode}`
     });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
@@ -109,7 +120,7 @@ app.get('/:code', async (req: Request, res: Response) => {
       return res.status(404).send(`
         <div style="font-family:sans-serif; text-align:center; padding-top:100px;">
           <h1>Link não encontrado 💔</h1>
-          <p>O código <strong>${rawCode ?? ''}</strong> não existe ou foi apagado.</p>
+          <p>O código <strong>${escapeHtml(rawCode ?? '')}</strong> não existe ou foi apagado.</p>
         </div>
       `);
     }
@@ -124,15 +135,15 @@ app.get('/:code', async (req: Request, res: Response) => {
       return res.status(404).send(`
         <div style="font-family:sans-serif; text-align:center; padding-top:100px;">
           <h1>Link não encontrado 💔</h1>
-          <p>O código <strong>${code}</strong> não existe ou foi apagado.</p>
+          <p>O código <strong>${escapeHtml(code)}</strong> não existe ou foi apagado.</p>
         </div>
       `);
     }
 
     // REDIRECIONA PARA O SITE ORIGINAL
     // Importante: garante que a URL tenha http/https para o Express não achar que é uma rota interna
-    const urlDestino = linkObj.originalUrl.startsWith('http') 
-      ? linkObj.originalUrl 
+    const urlDestino = linkObj.originalUrl.startsWith('http')
+      ? linkObj.originalUrl
       : `https://${linkObj.originalUrl}`;
 
     return res.redirect(urlDestino);
