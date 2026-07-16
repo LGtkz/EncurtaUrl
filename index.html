@@ -70,94 +70,111 @@ body{font-family:'Inter',sans-serif;background:#fafafa;color:#18181b;min-height:
 </main>
 
 <script>
-const API_URL = 'https://6e97-2804-14d-a484-4e33-c814-c2ed-e6db-5073.ngrok-free.app/api';
-const BASE_URL = API_URL.replace(/\/api\/?$/, '');
-let links = [];
-let isLoadingLinks = true;
+// O túnel Ngrok real onde a sua API roda em background (NÃO APAGUE ESTE LINK!)
+const API_TUNNEL = 'https://6e97-2804-14d-a484-4e33-c814-c2ed-e6db-5073.ngrok-free.app';
+const API_URL = `${API_TUNNEL}/api`;
 
-function isValidUrl(v){
-  try{ new URL(v.match(/^https?:\/\//) ? v : 'https://'+v); return true; }catch{ return false; }
+// O domínio estético personalizado que você quer exibir para o usuário
+const DISPLAY_DOMAIN = 'https://Maria.Eduarda';
+
+let links = [];
+
+// Atualiza visualmente o prefixo no formulário para "Maria.Eduarda/"
+document.querySelector('.alias-prefix').textContent = 'Maria.Eduarda/';
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-// Carrega os links do banco assim que abrir a aplicação
-async function carregarLinks() {
-  isLoadingLinks = true;
-  render();
+function isValidUrl(v){
+  try { new URL(v.match(/^https?:\/\//) ? v : 'https://'+v); return true; } catch { return false; }
+}
 
+// Carrega os links do banco
+async function carregarLinks() {
   try {
-    const response = await fetch(`${API_URL}/links`);
+    const response = await fetch(`${API_URL}/links`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' }
+    });
     if (response.ok) {
-      const data = await response.json();
-      links = Array.isArray(data) ? data : [];
+      links = await response.json();
+      render();
     }
   } catch (err) {
     console.error('Erro ao conectar com o banco de dados:', err);
-  } finally {
-    isLoadingLinks = false;
-    render();
   }
 }
 
 function render(){
-  const list=document.getElementById('list');
-  const results=document.getElementById('results');
-  const hasLinks = Array.isArray(links) && links.length > 0;
-
-  results.style.display = hasLinks || isLoadingLinks ? 'block' : 'none';
-
-  if (!hasLinks) {
-    list.innerHTML = isLoadingLinks
-      ? '<li class="link-item empty-state">Carregando seus links...</li>'
-      : '<li class="link-item empty-state">Nenhum link salvo ainda.</li>';
-    return;
-  }
+  const list = document.getElementById('list');
+  const results = document.getElementById('results');
+  results.style.display = links.length ? 'block' : 'none';
   
   list.innerHTML = links.map(l => {
-    const shortUrl = `${BASE_URL}/${encodeURIComponent(l.code)}`;
+    // 1. URL real que o Ngrok vai receber e redirecionar (comunica com seu backend)
+    const realUrl = `${API_TUNNEL}/${l.code}`;
+    
+    // 2. URL bonita que você quer mostrar na interface
+    const displayUrl = `${DISPLAY_DOMAIN}/${l.code}`;
+    
+    const safeRealUrl = escapeHtml(realUrl);
+    const safeDisplayUrl = escapeHtml(displayUrl);
+    const safeOriginal = escapeHtml(l.original);
+    const safeCode = escapeHtml(l.code);
+    
     return `
-    <li class="link-item" data-code="${l.code}">
+    <li class="link-item" data-code="${safeCode}">
       <div class="link-info">
-        <a class="short" href="${shortUrl}" target="_blank" rel="noopener">
-          ${shortUrl}
+        <a class="short" href="${safeRealUrl}" target="_blank" rel="noopener">
+          ${safeDisplayUrl}
         </a>
-        <span class="original" title="${l.original}">${l.original}</span>
+        <span class="original" title="${safeOriginal}">${safeOriginal}</span>
       </div>
       <div class="link-actions">
         <button class="btn-icon copy-btn">Copiar</button>
         <button class="btn-icon danger remove-btn">Remover</button>
       </div>
-    </li>`
+    </li>`;
   }).join('');
 
-list.querySelectorAll('.copy-btn').forEach(btn => {
+  // Ação de Copiar (Continua copiando o link estético Maria.Eduarda para você compartilhar!)
+  list.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const li = e.target.closest('.link-item');
       const code = li.dataset.code;
+      const linkEstetico = `${DISPLAY_DOMAIN}/${code}`;
       
-      const linkRealFuncional = `${BASE_URL}/${encodeURIComponent(code)}`;
-      
-      navigator.clipboard.writeText(linkRealFuncional).then(() => {
+      navigator.clipboard.writeText(linkEstetico).then(() => {
         btn.textContent = 'Copiado!'; btn.classList.add('copied');
         setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1500);
       });
     });
   });
 
-  // Ação do Botão Remover (Dispara chamada DELETE no banco)
-  list.querySelectorAll('.remove-btn').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
+  // Ação de Remover (comunica-se via Ngrok)
+  list.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
       const li = e.target.closest('.link-item');
       const code = li.dataset.code;
       
       try {
         const response = await fetch(`${API_URL}/shorten/${code}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: { 'ngrok-skip-browser-warning': 'true' }
         });
 
         if (response.ok) {
-          const idx = links.findIndex(l=>l.code===code);
-          links.splice(idx,1);
-          render();
+          const idx = links.findIndex(l => l.code === code);
+          if (idx !== -1) {
+            links.splice(idx, 1);
+            render();
+          }
         } else {
           alert('Erro ao deletar o link no servidor.');
         }
@@ -168,22 +185,24 @@ list.querySelectorAll('.copy-btn').forEach(btn => {
   });
 }
 
-// Envia os dados por POST para salvar na API
 async function encurtar(){
   const errorEl = document.getElementById('error');
-  errorEl.style.display='none';
+  errorEl.style.display = 'none';
   const urlInput = document.getElementById('url');
   const aliasInput = document.getElementById('alias');
   const url = urlInput.value.trim();
   const custom_code = aliasInput.value.trim();
 
-  if(!url){ errorEl.textContent='Cole um link para continuar.'; errorEl.style.display='block'; return; }
-  if(!isValidUrl(url)){ errorEl.textContent='Digite uma URL válida (ex: https://exemplo.com).'; errorEl.style.display='block'; return; }
+  if(!url){ errorEl.textContent = 'Cole um link para continuar.'; errorEl.style.display = 'block'; return; }
+  if(!isValidUrl(url)){ errorEl.textContent = 'Digite uma URL válida.'; errorEl.style.display = 'block'; return; }
 
   try {
     const response = await fetch(`${API_URL}/shorten`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify({ original_url: url, custom_code })
     });
 
@@ -195,9 +214,13 @@ async function encurtar(){
       return;
     }
 
-    // Adiciona o link retornado pela API na lista
-    links.unshift({ original: data.original, code: data.code, short: `${BASE_URL}/${data.code}` });
-    urlInput.value=''; aliasInput.value='';
+    links.unshift({ 
+      original: data.original, 
+      code: data.code 
+    });
+    
+    urlInput.value = ''; 
+    aliasInput.value = '';
     render();
 
   } catch (err) {
@@ -207,10 +230,9 @@ async function encurtar(){
 }
 
 document.getElementById('btn').addEventListener('click', encurtar);
-document.getElementById('url').addEventListener('keyup', e=>{ if(e.key==='Enter') encurtar(); });
-document.getElementById('alias').addEventListener('keyup', e=>{ if(e.key==='Enter') encurtar(); });
+document.getElementById('url').addEventListener('keyup', e => { if(e.key==='Enter') encurtar(); });
+document.getElementById('alias').addEventListener('keyup', e => { if(e.key==='Enter') encurtar(); });
 
-// Inicializa a listagem trazendo os dados persistidos no banco
 carregarLinks();
 </script>
 </body>

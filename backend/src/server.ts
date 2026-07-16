@@ -4,6 +4,9 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 
+// Altere esta variável no seu backend para refletir o seu nome personalizado:
+const CUSTOM_DOMAIN = 'https://Maria.Eduarda';
+
 const app = express();
 
 // Prisma 7 exige um "driver adapter" para se conectar ao banco.
@@ -15,11 +18,6 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
-
-function generateRandomCode(length = 6): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
 
 // ROTA: Listar todos os links (GET /api/links)
 app.get('/api/links', async (req: Request, res: Response) => {
@@ -63,7 +61,7 @@ app.post('/api/shorten', async (req: Request, res: Response) => {
     } else {
       let isUnique = false;
       while (!isUnique) {
-        code = generateRandomCode();
+        code = CUSTOM_DOMAIN ;
         const check = await prisma.link.findUnique({ where: { shortCode: code.toLowerCase() } });
         if (!check) isUnique = true;
       }
